@@ -1,1 +1,85 @@
-
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verity AI</title>
+<style>
+:root{color-scheme:dark;--bg:#071525;--panel:#10263b;--line:#21455f;--cyan:#52e5ff;--text:#f1f8ff;--muted:#a9c3d8}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top,#123c58,var(--bg) 55%);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);min-height:100vh;display:flex;justify-content:center;padding:18px}
+.app{width:min(760px,100%);display:flex;flex-direction:column;gap:14px}
+header{display:flex;align-items:center;gap:12px;padding:16px;background:#0d2236;border:1px solid var(--line);border-radius:20px}
+.logo{font-size:30px;background:#143d55;border-radius:14px;padding:10px}
+h1{font-size:23px;margin:0} .sub{color:var(--muted);font-size:13px;margin-top:3px}
+.panel{background:#0d2032;border:1px solid var(--line);border-radius:18px;padding:14px}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+select,input,button,textarea{font:inherit}
+select,textarea,input{width:100%;color:var(--text);background:#071827;border:1px solid #2b536c;border-radius:12px;padding:11px}
+button{cursor:pointer;border:1px solid #2b6179;border-radius:12px;padding:11px 13px;color:var(--text);background:#153d56}
+button.primary{background:linear-gradient(120deg,#087d9e,#2765a7);border-color:#52dfff;font-weight:700}
+button:disabled{opacity:.5;cursor:default}
+#chat{height:min(44vh,420px);min-height:260px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:11px 13px;border-radius:15px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+.bot{align-self:flex-start;background:#15344a;border:1px solid #28526b}
+.user{align-self:flex-end;background:#075e7c}
+.who{font-size:11px;color:#9bdcf0;margin-bottom:4px;font-weight:700}
+.composer{display:flex;gap:8px;margin-top:10px}.composer input{flex:1;min-width:0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.status{color:var(--cyan);font-size:12px;min-height:18px;margin-top:7px}
+@media(max-width:520px){.settings{grid-template-columns:1fr}.composer{flex-wrap:wrap}.composer input{flex-basis:100%}#chat{height:42vh}}
+</style>
+</head>
+<body>
+<main class="app">
+<header><div class="logo">🤖</div><div><h1>Verity AI</h1><div class="sub">Your friendly voice companion</div></div></header>
+<section class="panel settings">
+<div><label for="language">Reply language</label><select id="language">
+<option value="en-IN">English (India)</option><option value="hi-IN">हिन्दी (Hindi)</option><option value="ta-IN">தமிழ் (Tamil)</option><option value="te-IN">తెలుగు (Telugu)</option><option value="ml-IN">മലയാളം (Malayalam)</option><option value="kn-IN">ಕನ್ನಡ (Kannada)</option><option value="bn-IN">বাংলা (Bengali)</option><option value="mr-IN">मराठी (Marathi)</option><option value="ur-PK">اردو (Urdu)</option><option value="ar-SA">العربية (Arabic)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="es-ES">Español</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="pt-BR">Português</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="zh-CN">中文</option><option value="ru-RU">Русский</option>
+</select></div>
+<div><label for="voice">Voice style</label><select id="voice"><option value="natural">Natural</option><option value="bright">Bright / higher pitch</option><option value="deep">Deep / lower pitch</option><option value="robot">Robot</option></select></div>
+<div><label for="voiceList">Device voice</label><select id="voiceList"><option value="">Default device voice</option></select></div>
+<div><label>Voice tools</label><button id="preview" class="primary" type="button">🔊 Preview voice</button></div>
+</section>
+<section class="panel"><div id="chat" aria-live="polite"></div>
+<div class="composer"><input id="message" type="text" placeholder="Type a message to Verity…" autocomplete="off"><button id="send" class="primary" type="button">Send ➤</button></div>
+<div class="actions"><button id="listen" type="button">🎤 Speak</button><button id="read" type="button">🔊 Read latest reply</button><button id="stop" type="button">⏹ Stop voice</button><button id="clear" type="button">🧹 Clear chat</button></div>
+<div id="status" class="status" role="status"></div></section>
+<div class="note">Voice availability depends on the voices installed on your device and browser. This starter version uses simple built-in replies; it is not connected to a live AI service yet.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const chat=$('chat'), statusBox=$('status');
+let latestReply='Hi! I’m Verity AI. Ask me something! 🤖';
+const replies=[
+[/\b(hi|hello|hey|vanakkam)\b/i,()=>`Hey there! 👋 I’m Verity AI. How can I help you today?`],
+[/\b(who are you|your name)\b/i,()=>`I’m Verity AI, your friendly assistant! 🤖💙`],
+[/\b(how are you)\b/i,()=>`I’m running smoothly and ready to help! 😄`],
+[/\b(thank|thanks)\b/i,()=>`You’re welcome! 😊 Anything else?`],
+[/\b(time|date)\b/i,()=>`I can’t check the live time in this starter version, but your device clock can! ⏰`],
+[/\b(tamil|தமிழ்)\b/i,()=>`வணக்கம்! 👋 நான் Verity AI. எப்படி உதவலாம்? 💙`],
+[/\b(joke|funny)\b/i,()=>`Why did the computer go to the doctor? It had a virus! 😂💻`],
+[/\b(help)\b/i,()=>`Sure! Try asking for a joke, saying hello, or choosing a language above. 🧠`]
+];
+function addMessage(text,who){const wrap=document.createElement('div');wrap.className='msg '+who;const label=document.createElement('div');label.className='who';label.textContent=who==='bot'?'VERITY AI':'YOU';const body=document.createElement('div');body.textContent=text;wrap.append(label,body);chat.appendChild(wrap);chat.scrollTop=chat.scrollHeight;}
+function replyFor(text){for(const [pattern,fn] of replies){if(pattern.test(text))return fn();}
+if($('language').value==='ta-IN')return 'நல்ல கேள்வி! 😊 இந்த புதிய பதிப்பில் எனக்கு இன்னும் குறைந்த பதில்கள்தான் உள்ளன. பின்னர் உண்மையான AI-ஐ இணைக்கலாம்.';
+if($('language').value==='hi-IN')return 'अच्छा सवाल! 😊 इस शुरुआती संस्करण में अभी सीमित जवाब हैं। बाद में हम असली AI जोड़ सकते हैं।';
+return `Good question! 😊 I’m the starter version of Verity, so my replies are limited right now. We can connect a real AI service later!`;
+}
+function cleanForSpeech(text){return text.replace(/[\p{Extended_Pictographic}\p{Emoji_Component}\uFE0F\u200D]/gu,'').replace(/\s{2,}/g,' ').trim();}
+function getVoice(){const all=window.speechSynthesis?.getVoices?.()||[];const chosen=$('voiceList').value; if(chosen){const v=all.find(x=>x.name===chosen);if(v)return v;}const lang=$('language').value.toLowerCase();return all.find(v=>v.lang.toLowerCase()===lang)||all.find(v=>v.lang.toLowerCase().startsWith(lang.split('-')[0]))||null;}
+function speak(text){if(!('speechSynthesis'in window)){statusBox.textContent='Speech is not supported in this browser.';return;}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(cleanForSpeech(text));u.lang=$('language').value;const style=$('voice').value;u.pitch=style==='bright'?1.35:style==='deep'?.72:style==='robot'?.55:1;u.rate=style==='robot'?.85:1;const v=getVoice();if(v)u.voice=v;u.onstart=()=>statusBox.textContent='Speaking…';u.onend=()=>statusBox.textContent='';u.onerror=()=>statusBox.textContent='Could not play voice. Try another device voice.';speechSynthesis.speak(u);}
+function send(){const text=$('message').value.trim();if(!text)return;addMessage(text,'user');$('message').value='';latestReply=replyFor(text);addMessage(latestReply,'bot');}
+$('send').addEventListener('click',send);$('message').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+$('preview').addEventListener('click',()=>speak('Hello! I am Verity AI. This is a preview of your selected voice.'));$('read').addEventListener('click',()=>speak(latestReply));$('stop').addEventListener('click',()=>{if('speechSynthesis'in window)speechSynthesis.cancel();statusBox.textContent='Voice stopped.';});
+$('clear').addEventListener('click',()=>{chat.replaceChildren();latestReply='Hi! I’m Verity AI. Ask me something! 🤖';addMessage(latestReply,'bot');});
+$('listen').addEventListener('click',()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){statusBox.textContent='Voice input is not supported here. Try Chrome or type your message.';return;}const r=new SR();r.lang=$('language').value;r.interimResults=false;r.maxAlternatives=1;statusBox.textContent='Listening…';r.onresult=e=>{$('message').value=e.results[0][0].transcript;statusBox.textContent='Got it! Tap Send.';};r.onerror=()=>statusBox.textContent='Could not hear you. Check microphone permission or type instead.';r.onend=()=>{};r.start();});
+function loadVoices(){const list=$('voiceList'),prev=list.value;const voices=('speechSynthesis'in window)?speechSynthesis.getVoices():[];list.replaceChildren();const def=document.createElement('option');def.value='';def.textContent='Default device voice';list.appendChild(def);voices.forEach(v=>{const o=document.createElement('option');o.value=v.name;o.textContent=`${v.name} (${v.lang})`;list.appendChild(o);});if([...list.options].some(o=>o.value===prev))list.value=prev;}
+if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
+addMessage('Hi! I’m Verity AI. Try saying hello, asking for a joke, or using the voice buttons. 🤖💙','bot');
+</script>
+</body>
+</html>
